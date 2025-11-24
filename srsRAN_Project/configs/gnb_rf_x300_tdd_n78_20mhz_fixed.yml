@@ -1,0 +1,76 @@
+# Fixed configuration for srsRAN Project gNB with USRP X310
+# TDD cell in band 78, 20 MHz bandwidth, 30 kHz sub-carrier-spacing
+# Optimized for X310 hardware (serial: 315647F) and proper logging
+
+cu_cp:
+  amf:
+    addr: 10.112.100.51
+    port: 38412
+    bind_addr: 10.112.100.21
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_sdr:
+  device_driver: uhd
+  device_args: type=x300,addr=192.168.40.42,master_clock_rate=184.32e6,send_frame_size=8000,recv_frame_size=8000
+  srate: 30.72  # Required for 20MHz BW (16 × 1.92 MHz)
+  otw_format: sc16
+  tx_gain: 20.0  # Conservative gain for X310
+  rx_gain: 30.0  # Conservative gain for X310
+  # Clock configuration for X310
+  clock: internal
+  sync: internal
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+
+# RRC-focused logging configuration
+log:
+  filename: /home/aerial/sahana/logs/gnb28th.log  # Combined log file
+  all_level: none  # Disable all logs by default
+  rrc_level: debug  # Enable RRC level logging
+  ngap_level: info   # Keep NGAP at info level for context
+  mac_level: debug    # Enable detailed MAC logging
+  phy_level: debug   # Only show PHY errors
+  gtpu_level: none   # Disable GTP-U logging  pdcp_level: none   # Disable PDCP logging
+  rlc_level: none    # Disable RLC logging
+  f1u_level: none    # Disable F1-U logging
+  sec_level: none    # Disable security logging
+  cu_level: none     # Disable CU level logging
+  du_level: none     # Disable DU level logging
+  radio_level: none  # Disable radio logging
+  hal_level: none    # Disable HAL logging
+  
+  # Log formatting
+  hex_max_size: 0    # Disable hex dumps for cleaner logs
+  
+# Enable more detailed RF logging
+expert_execution:
+  threads:
+    lower_phy:
+      execution_profile: quad  # Optimized for X310
+    upper_phy:
+      nof_dl_threads: 6
+      nof_ul_threads: 2
+      pdsch_processor_type: auto
+  # CPU affinity settings for better performance
+  affinities:
+    low_priority_pinning: mask
+    #high_priority_pinning: mask
+
+pcap:
+  mac_enable: true
+  mac_filename: /home/aerial/sahana/logs/gnb28th_mac.pcap
+  ngap_enable: true
+  ngap_filename: /home/aerial/sahana/logs/gnb28th_ngap.pcap
+

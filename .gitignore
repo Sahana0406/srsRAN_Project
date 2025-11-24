@@ -1,0 +1,57 @@
+# Ignore all files by default
+*/
+
+# Track all directories except build and log directories
+!*/
+!**/
+
+# Ignore build and log directories
+build/
+logs/
+
+# Keep .gitignore in all directories
+!.gitignore
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Ignore all .a and .so files
+*.a
+*.so
+*.o
+*.d
+*.lo
+*.la
+
+# Ignore log files
+*.log
+*.log.*
+*.pcap
+*.pcapng
+
+# Ignore local configuration
+*.local
+*.local.*
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore binary files
+*.bin
+*.dat
+
+# Ignore compiled source
+*.com
+*.class
+*.dll
+*.exe
+*.out

@@ -1,0 +1,84 @@
+# MIMO Configuration for srsRAN Project gNB with USRP X310 (2x2 MIMO)
+# TDD cell in band 78, 20 MHz bandwidth, 30 kHz sub-carrier-spacing
+
+cu_cp:
+  amf:
+    addr: 10.112.100.51
+    port: 38412
+    bind_addr: 10.112.100.21
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_sdr:
+  device_driver: uhd
+  device_args: "type=x300,addr=192.168.40.38,master_clock_rate=184.32e6,send_frame_size=8000,recv_frame_size=8000"
+  srate: 30.72
+  otw_format: sc16
+  tx_gain: 20.0  # Gains for both TX chains
+  rx_gain: 30.0  # Gains for both RX chains
+  clock: internal
+  sync: internal
+
+
+
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+
+# Logging configuration
+log:
+  filename: /home/aerial/sahana/logs/gnb_Mimo_Hmatrix_Test1.log
+  all_level: none  # Disable all logs by default
+  rrc_level: none  # Enable RRC level logging
+  ngap_level: info   # Keep NGAP at info level for context
+  mac_level: debug    # Enable detailed MAC logging
+  phy_level: info   
+  gtpu_level: none   # Disable GTP-U logging  pdcp_level: none   # Disable PDCP logging
+  rlc_level: none    # Disable RLC logging
+  f1u_level: none    # Disable F1-U logging
+  sec_level: none    # Disable security logging
+  cu_level: none     # Disable CU level logging
+  du_level: none     # Disable DU level logging
+  radio_level: none  # Disable radio logging
+  hal_level: none    # Disable HAL logging
+  
+  
+  #rrc:
+   # filename: /home/aerial/sahana/logs/gnb_mimo_rrc.log
+   # all_level: none
+   # rrc_level: debug
+ 
+  #mac:
+   # filename: /home/aerial/sahana/logs/gnb_mimo_mac.log
+   # all_level: none
+   # mac_level: debug
+
+  hex_max_size: 0
+
+expert_execution:
+  threads:
+    lower_phy:
+      execution_profile: quad
+    upper_phy:
+      nof_dl_threads: 6
+      nof_ul_threads: 2
+      pdsch_processor_type: auto
+  affinities:
+    low_priority_pinning: mask
+
+pcap:
+  mac_enable: true
+  mac_filename: /home/aerial/sahana/logs/gnb_Mimo_mac_`Hmatrix_Test1`.pcap
+  mac_type: dlt
+  ngap_enable: true
+  ngap_filename: /home/aerial/sahana/logs/gnb_Mimo_ngap_`Hmatrix_Test1`.pcap

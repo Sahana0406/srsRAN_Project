@@ -1,0 +1,56 @@
+# MIMO Configuration for srsRAN Project gNB with USRP X310 (2x2 MIMO)
+# TDD cell in band 78, 20 MHz bandwidth, 30 kHz SCS
+
+# MIMO Configuration for srsRAN Project gNB with USRP X310 (2x2 MIMO)
+
+cu_cp:
+  amf:
+    addr: 10.112.100.51
+    port: 38412
+    bind_addr: 10.112.100.21
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_sdr:
+  device_driver: uhd
+  device_args: "type=x300,addr=192.168.40.62,master_clock_rate=184.32e6,send_frame_size=8000,recv_frame_size=8000"
+  srate: 30.72
+  otw_format: sc16
+  tx_gain: 20.0
+  rx_gain: 30.0
+  clock: internal
+  sync: internal
+
+cell_cfg:
+  #dl_arfcn: 632628 // Using automatic ARFCN selection for band 78
+  dl_arfcn: 636668
+  band: 48
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+
+log:
+  filename: /home/aerial/sahana/logs/gnb_Mimo_Hmatrix_Test7_newband.log
+  all_level: debug
+  #ngap_level: info
+  #mac_level: debug
+  #phy_level: info
+  #hex_max_size: 0
+
+expert_execution:
+  threads:
+    lower_phy:
+      execution_profile: triple
+
+pcap:
+  mac_enable: true
+  mac_filename: /home/aerial/sahana/logs/gnb_Mimo_mac_Hmatrix_Test7_newband.pcap
+  mac_type: dlt
+  ngap_enable: true
+  ngap_filename: /home/aerial/sahana/logs/gnb_Mimo_ngap_Hmatrix_Test7_newband.pcap

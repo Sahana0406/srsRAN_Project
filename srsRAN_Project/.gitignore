@@ -1,0 +1,60 @@
+# Build directories
+build/
+*.a
+*.so
+*.o
+*.d
+*.lo
+*.la
+
+# Log files
+*.log
+*.log.*
+logs/
+*.pcap
+*.pcapng
+*.pcapng.*
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Local configuration
+*.local
+*.local.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary files
+*.tmp
+*.temp
+
+# Binary files
+*.bin
+*.dat
+
+# Compiled source
+*.com
+*.class
+*.dll
+*.exe
+*.out
+*.so
+
+# Ignore all files in the configs directory by default
+configs/*
+# But track this .gitignore
+!configs/.gitignore
+
+# Keep the configs directory
+!configs/

@@ -1,0 +1,43 @@
+# This example configuration outlines how to configure the srsRAN Project gNB to create a single TDD cell
+# transmitting in band 78, with 20 MHz bandwidth and 30 kHz sub-carrier-spacing. A USRP B200 is configured
+# as the RF frontend using split 8. Note in this example an external clock source is not used, so the sync
+# is not defined and the default is used.
+
+cu_cp:
+  amf:
+    addr: 10.112.100.21
+    port: 38412
+    bind_addr: 10.112.100.21
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_sdr:
+  device_driver: uhd
+  device_args: type=x300,addr=192.168.40.62,num_recv_frames=64,num_send_frames=64
+  srate: 23.04
+  otw_format: sc16
+  tx_gain: 31.5
+  rx_gain: 37.5
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+
+log:
+  filename: /home/aerial/sahana/logs/$(date +%Y-%m-%d_%H%M%S)_gnb.log
+  all_level: debug
+
+pcap:
+  mac_enable: true
+  mac_filename: /home/aerial/sahana/logs/$(date +%Y-%m-%d_%H%M%S)_gnb_mac.pcap
+  ngap_enable: true
+  ngap_filename: /home/aerial/sahana/logs/$(date +%Y-%m-%d_%H%M%S)_gnb_ngap.pcap
