@@ -23,7 +23,11 @@ add_library(srsran_channel_estimator STATIC
     channel_estimator/port_channel_estimator_average_impl.cpp
     channel_estimator/port_channel_estimator_helpers.cpp
 )
-target_link_libraries(srsran_channel_estimator srsvec srsran_phy_support)
+
+target_include_directories(srsran_channel_estimator PRIVATE
+    ${PROJECT_SOURCE_DIR}/lib
+)
+target_link_libraries(srsran_channel_estimator srsvec srsran_phy_support )
 
 add_library(srsran_nzp_csi_rs_generator STATIC
     nzp_csi_rs/factories.cpp

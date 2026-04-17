@@ -67,6 +67,7 @@ public:
     freq_interpolator(std::move(interp)),
     ta_estimator(std::move(ta_estimator_))
   {
+    //initialize_h_matrix_logger();
     srsran_assert(freq_interpolator, "Invalid interpolator.");
     srsran_assert(ta_estimator, "Invalid TA estimator.");
   }

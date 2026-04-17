@@ -35,6 +35,11 @@
 #include "srsran/srslog/srslog.h"
 #include "srsran/support/transform_optional.h"
 #include "fmt/format.h"
+#include <chrono>
+#include <ctime>
+#include <cstdio>
+#include <memory>
+#include <vector>
 
 using namespace srsran;
 
@@ -115,7 +120,50 @@ static void setup_auxiliary_buffers(
     unsigned                                         nof_symbol_pilots);
 
 // Logger for channel-matrix dumps.
-static srslog::basic_logger& ce_log = srslog::fetch_basic_logger("PHY");
+//static srslog::basic_logger& ce_log = srslog::fetch_basic_logger("PHY");
+static srslog::basic_logger* h_matrix_log = nullptr;
+
+static void initialize_h_matrix_logger()
+{
+  if (h_matrix_log != nullptr) {
+    return; // Already initialized for this gNB run
+  }
+
+  auto now     = std::chrono::system_clock::now();
+  auto now_sec = std::chrono::system_clock::to_time_t(now);
+
+  std::tm tm{};
+  localtime_r(&now_sec, &tm);
+
+  char filename[256];
+  std::snprintf(filename,
+                sizeof(filename),
+                "/home/aerial/sahana/logs/H_matrix_%04d%02d%02d_%02d%02d%02d.log",
+                tm.tm_year + 1900,
+                tm.tm_mon + 1,
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec);
+
+  // Create or fetch a dedicated file sink for this path.
+  // Uses your srslog::fetch_file_sink(...) helper.
+  auto& file_sink = srslog::fetch_file_sink(
+      filename,
+      0,                          // max_size = 0 → no rotation limit
+      false,                      // mark_eof = false
+      true,                       // force_flush = true
+      srslog::create_contextual_text_formatter()  // or create_text_formatter()
+  );
+
+  // Bind a basic logger to that sink only.
+  auto& logger = srslog::fetch_basic_logger("H_MATRIX", file_sink, /*should_print_context=*/false);
+  logger.set_level(srslog::basic_levels::info);
+  logger.set_hex_dump_max_size(0);
+
+  h_matrix_log = &logger;
+  h_matrix_log->info("===== H MATRIX LOG STARTED =====");
+}
 
 // Log a compact slice of H for one (symbol, layer, port).
 static void log_symbol_H(span<const cbf16_t> H_bf16,
@@ -124,11 +172,20 @@ static void log_symbol_H(span<const cbf16_t> H_bf16,
                          unsigned             i_symbol,
                          unsigned             sample_step = 12)
 {
+  // Lazy initialization — ensure logger exists before using it
+  if (h_matrix_log == nullptr) {
+      initialize_h_matrix_logger();
+  }
+  if (h_matrix_log == nullptr) {
+      return;  // Fail-safe
+  }
+
   std::vector<cf_t> H(H_bf16.size());
   srsvec::convert(span<cf_t>(H.data(), H.size()), H_bf16);
 
   std::string line;
   line.reserve(H.size() * 16);
+
   for (unsigned k = 0; k < H.size(); k += sample_step) {
     const auto& h = H[k];
     fmt::format_to(std::back_inserter(line),
@@ -137,9 +194,10 @@ static void log_symbol_H(span<const cbf16_t> H_bf16,
                    k, h.real(), h.imag());
   }
 
-  ce_log.info("H | port={} layer={} sym={} NRE={} (step={}): [{}]",
-               port, layer, i_symbol, H.size(), sample_step, line);
+  h_matrix_log->info("H | port={} layer={} sym={} NRE={} (step={}): [{}]",
+                     port, layer, i_symbol, H.size(), sample_step, line);
 }
+
 
 /// \brief Interpolates two vectors.
 /// \param[out] out   Interpolation result.
