@@ -120,7 +120,6 @@ static void setup_auxiliary_buffers(
     unsigned                                         nof_symbol_pilots);
 
 // Logger for channel-matrix dumps.
-//static srslog::basic_logger& ce_log = srslog::fetch_basic_logger("PHY");
 static srslog::basic_logger* h_matrix_log = nullptr;
 
 static void initialize_h_matrix_logger()
@@ -147,13 +146,12 @@ static void initialize_h_matrix_logger()
                 tm.tm_sec);
 
   // Create or fetch a dedicated file sink for this path.
-  // Uses your srslog::fetch_file_sink(...) helper.
   auto& file_sink = srslog::fetch_file_sink(
       filename,
       0,                          // max_size = 0 → no rotation limit
       false,                      // mark_eof = false
       true,                       // force_flush = true
-      srslog::create_contextual_text_formatter()  // or create_text_formatter()
+      srslog::create_contextual_text_formatter()
   );
 
   // Bind a basic logger to that sink only.
@@ -165,19 +163,56 @@ static void initialize_h_matrix_logger()
   h_matrix_log->info("===== H MATRIX LOG STARTED =====");
 }
 
-// Log a compact slice of H for one (symbol, layer, port).
+// Log a compact slice of H for one (symbol, layer, port) — input is cf_t
+// (float32).  This function is called directly from the freq_response buffer
+// BEFORE the cf_t → cbf16_t conversion in apply_td_domain_strategy, so it
+// preserves the full float32 dynamic range (~149 dB) with no quantisation
+// loss.  Only available for the contiguous-allocation path where freq_response
+// holds the complete interpolated estimate.
+static void log_symbol_H_f32(span<const cf_t> H_f32,
+                              unsigned          port,
+                              unsigned          layer,
+                              unsigned          i_symbol,
+                              unsigned          sample_step = 12)
+{
+  // Lazy initialization — ensure logger exists before using it
+  if (h_matrix_log == nullptr) {
+    initialize_h_matrix_logger();
+  }
+  if (h_matrix_log == nullptr) {
+    return;  // Fail-safe
+  }
+
+  std::string line;
+  line.reserve(H_f32.size() * 18);
+  for (unsigned k = 0; k < H_f32.size(); k += sample_step) {
+    const auto& h = H_f32[k];
+    fmt::format_to(std::back_inserter(line),
+                   "{}{}:{:.6f}{:+.6f}j",
+                   (line.empty() ? "" : ", "),
+                   k, h.real(), h.imag());
+  }
+
+  h_matrix_log->info("H | port={} layer={} sym={} NRE={} (step={}) [f32]: [{}]",
+                     port, layer, i_symbol, H_f32.size(), sample_step, line);
+}
+
+// Log a compact slice of H for one (symbol, layer, port) — input is cbf16_t.
+// Used for the non-contiguous allocation path where the float32 freq_response
+// is fragmented across PRBs and cannot be logged as a single span.
+// The cbf16_t → cf_t conversion unpacks bfloat16 bits but the values carry
+// ~42 dB dynamic range (7-bit mantissa) from the earlier cf_t → cbf16_t write.
 static void log_symbol_H(span<const cbf16_t> H_bf16,
                          unsigned             port,
                          unsigned             layer,
                          unsigned             i_symbol,
                          unsigned             sample_step = 12)
 {
-  // Lazy initialization — ensure logger exists before using it
   if (h_matrix_log == nullptr) {
-      initialize_h_matrix_logger();
+    initialize_h_matrix_logger();
   }
   if (h_matrix_log == nullptr) {
-      return;  // Fail-safe
+    return;
   }
 
   std::vector<cf_t> H(H_bf16.size());
@@ -185,16 +220,15 @@ static void log_symbol_H(span<const cbf16_t> H_bf16,
 
   std::string line;
   line.reserve(H.size() * 16);
-
   for (unsigned k = 0; k < H.size(); k += sample_step) {
     const auto& h = H[k];
     fmt::format_to(std::back_inserter(line),
-                   "{}{}:{:.5f}{:+.5f}j",
+                   "{}{}:{:.6f}{:+.6f}j",
                    (line.empty() ? "" : ", "),
                    k, h.real(), h.imag());
   }
 
-  h_matrix_log->info("H | port={} layer={} sym={} NRE={} (step={}): [{}]",
+  h_matrix_log->info("H | port={} layer={} sym={} NRE={} (step={}) [bf16]: [{}]",
                      port, layer, i_symbol, H.size(), sample_step, line);
 }
 
@@ -441,17 +475,22 @@ void port_channel_estimator_average_impl::compute_hop(srsran::channel_estimate& 
 
       // Straight process if the allocation is contiguous.
       if (is_contiguous) {
+        // Log float32 frequency response BEFORE the cf_t → cbf16_t conversion
+        // in apply_td_domain_strategy.  This preserves the full float32 dynamic
+        // range (~149 dB) with no quantisation loss.
+        log_symbol_H_f32(freq_response.get_slice(0), port, i_layer, i_symbol);
         apply_td_domain_strategy(symbol_fr_resp.subspan(lowest_rb * NRE, nof_re),
                                  pattern.symbols,
                                  freq_response,
                                  first_symbol,
                                  last_symbol,
                                  i_symbol);
-        log_symbol_H(symbol_fr_resp, port, i_layer, i_symbol);
         continue;
       }
 
-      // Otherwise copy each PRB.
+      // Otherwise copy each PRB (non-contiguous allocation).
+      // freq_response is split across PRBs here so we cannot log it as a
+      // single contiguous float32 span.  Fall back to bf16 after conversion.
       unsigned i_prb_ce = 0;
       hop_rb_mask.for_each(
           0, hop_rb_mask.size(), [&, first_symbol_ = first_symbol, last_symbol_ = last_symbol](unsigned i_prb) {
